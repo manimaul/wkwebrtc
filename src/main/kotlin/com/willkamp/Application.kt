@@ -18,6 +18,9 @@ fun Application.configureRouting() {
         get("/turn") {
             call.respond(TurnServer())
         }
+        static {
+            resource("/", "static/index.html")
+        }
         static("/static") {
             resources("static")
         }
