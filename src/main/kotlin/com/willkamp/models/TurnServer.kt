@@ -28,7 +28,7 @@ data class IceServers(
         TurnServer(
             urls = "stun:turn.willkamp.com:3478",
             username = null,
-            credentials = null
+            credential = null
         )
     )
 )
@@ -39,7 +39,7 @@ data class TurnServer(
     val ttl: Long = Instant.now().epochSecond + 3600L * 6L, //6hrs
     val urls: String = "turn:turn.willkamp.com:3478",
     val username: String? = "$ttl:${UUID.randomUUID().toString().subSequence(0, 4)}",
-    val credentials: String? = username?.let { credentials(ttl, username.split(':')[1]) }
+    val credential: String? = username?.let { credentials(ttl, username.split(':')[1]) }
 )
 
 private fun hmacSha1(value: String, key: String): ByteArray {

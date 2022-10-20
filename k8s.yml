@@ -46,6 +46,9 @@ spec:
       containers:
         - image: docker.io/manimaul/webrtc:latest
           name: webrtc-web-svc
+          env:
+            - name: TURN_KEY
+              value: "{{TURN_KEY}}"
           ports:
             - containerPort: 8080
               name: http
