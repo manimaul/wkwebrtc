@@ -11,6 +11,11 @@ var webSocket = createWebSocket()
 const mediaConstraints = {
     audio: true,
     video: {width: 1280, height: 720},
+    constraints: {
+        facingMode: {
+            exact: 'environment'
+        }
+    },
 }
 let localStream
 let remoteStream
@@ -18,10 +23,9 @@ let isRoomCreator
 let rtcPeerConnection
 let roomId
 
-const iceServers = {
-    iceServers: [
-        {urls: 'stun:turn.willkamp.com.com:19302'},
-    ],
+const iceServers = async () => {
+    const response = await fetch('/ice');
+    return await response.json();
 }
 
 connectButton.addEventListener('click', () => {
@@ -144,16 +148,16 @@ function createWebSocket() {
 }
 
 let fnMap = {
-    "SocketOpen": async function(data) {
+    "SocketOpen": async function (data) {
         console.log(`Socket opened message = ${data.message}`)
     },
-    "RoomCreated": async function(data) {
+    "RoomCreated": async function (data) {
         console.log('Socket event callback: RoomCreated')
 
         await setLocalStream(mediaConstraints)
         isRoomCreator = true
     },
-    "RoomJoined": async function(data) {
+    "RoomJoined": async function (data) {
         console.log('Socket event callback: RoomJoined')
 
         await setLocalStream(mediaConstraints)
@@ -163,20 +167,22 @@ let fnMap = {
         console.log('Socket event callback: FullRoom')
         alert('The room is full, please try another one')
     },
-    "StartCall": async function(data) {
+    "StartCall": async function (data) {
         console.log('Socket event callback: StartCall')
         if (isRoomCreator) {
-            rtcPeerConnection = new RTCPeerConnection(iceServers)
+            let ice = await iceServers()
+            rtcPeerConnection = new RTCPeerConnection(ice)
             addLocalTracks(rtcPeerConnection)
             rtcPeerConnection.ontrack = setRemoteStream
             rtcPeerConnection.onicecandidate = sendIceCandidate
             await createOffer(rtcPeerConnection)
         }
     },
-    "WebRtcOffer": async function(data) {
+    "WebRtcOffer": async function (data) {
         console.log('Socket event callback: WebRtcOffer')
         if (!isRoomCreator) {
-            rtcPeerConnection = new RTCPeerConnection(iceServers)
+            let ice = await iceServers()
+            rtcPeerConnection = new RTCPeerConnection(ice)
             addLocalTracks(rtcPeerConnection)
             rtcPeerConnection.ontrack = setRemoteStream
             rtcPeerConnection.onicecandidate = sendIceCandidate
@@ -188,7 +194,7 @@ let fnMap = {
             await createAnswer(rtcPeerConnection)
         }
     },
-    "WebRtcAnswer": async function(data) {
+    "WebRtcAnswer": async function (data) {
         console.log('Socket event callback: WebRtcAnswer')
         let description = new RTCSessionDescription({
             "sdp": b64dec(data.sdp),
@@ -196,7 +202,7 @@ let fnMap = {
         })
         await rtcPeerConnection.setRemoteDescription(description)
     },
-    "WebRtcIceCandidate": async function(data) {
+    "WebRtcIceCandidate": async function (data) {
         console.log('Socket event callback: WebRtcIceCandidate')
         let candidate = new RTCIceCandidate({
             sdpMLineIndex: data.label,

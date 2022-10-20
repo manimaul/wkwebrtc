@@ -1,5 +1,6 @@
 package com.willkamp
 
+import com.willkamp.models.IceServers
 import com.willkamp.models.TurnServer
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -15,8 +16,8 @@ import org.slf4j.event.Level
 
 fun Application.configureRouting() {
     routing {
-        get("/turn") {
-            call.respond(TurnServer())
+        get("/ice") {
+            call.respond(IceServers())
         }
         static {
             resource("/", "static/index.html")

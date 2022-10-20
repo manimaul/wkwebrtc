@@ -75,3 +75,13 @@ proc-group=turnserver
 apt install -y certbot
 certbot certonly --standalone --rsa-key-size 4096 -m me@willkamp.com -d turn.willkamp.com 
 ```
+
+
+### Authentication
+
+```shell
+#https://www.ietf.org/proceedings/87/slides/slides-87-behave-10.pdf
+u=$((`date +%s` + 3600)):test
+p=$(echo -n $u | openssl dgst -hmac $TURN_KEY -sha1 -binary | base64)
+echo -e "username: $u\npassword: $p"
+```
