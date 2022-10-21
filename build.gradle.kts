@@ -22,6 +22,18 @@ repositories {
     mavenCentral()
 }
 
+tasks {
+    "run"(JavaExec::class) {
+        environment("WWW", File(project.rootDir, "www/build").absolutePath)
+    }
+}
+
+task<Exec>("www") {
+    workingDir("www")
+    commandLine("npm", "run", "build")
+}
+
+
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version")

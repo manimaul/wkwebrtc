@@ -13,17 +13,22 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.logging.*
 import org.slf4j.event.Level
+import java.io.File
 
 fun Application.configureRouting() {
+    val www = File(System.getenv("WWW"))
+    logger.info("www path = ${www.absolutePath}")
+    val index = File(www, "index.html")
+    logger.info("index path = ${index.absolutePath}")
     routing {
         get("/ice") {
             call.respond(IceServers())
         }
         static {
-            resource("/", "static/index.html")
+            file("/", index)
         }
-        static("/static") {
-            resources("static")
+        static("/") {
+            files(www)
         }
     }
 }

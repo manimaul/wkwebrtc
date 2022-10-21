@@ -13,7 +13,7 @@ class ApplicationTest {
             configureJson()
             configureRouting()
         }
-        client.get("/turn").apply {
+        client.get("/ice").apply {
             assertEquals(HttpStatusCode.OK, status)
         }
     }
