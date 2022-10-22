@@ -1,13 +1,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
+import Room from './Room';
+import RoomSelect from './RoomSelect';
 import reportWebVitals from './reportWebVitals';
+import {BrowserRouter, Route, Routes} from 'react-router-dom'
+require("bootstrap/dist/css/bootstrap.css")
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
   <React.StrictMode>
-    <App />
+      <BrowserRouter>
+          <Routes>
+              <Route path="/" element={<RoomSelect />} />
+              <Route path="room/:roomId" element={<Room />} />
+          </Routes>
+      </BrowserRouter>
   </React.StrictMode>
 );
 

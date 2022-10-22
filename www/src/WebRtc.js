@@ -1,63 +1,52 @@
-const roomSelectionContainer = document.getElementById('room-selection-container')
-const roomInput = document.getElementById('room-input')
-const connectButton = document.getElementById('connect-button')
+var webSocket = null
+var remoteStream = null
+var isRoomCreator = null
+var rtcPeerConnection = null
+var rtcDataChannel = null
+var roomId = null
+var localStream = null
+var remoteVideoComponent = null
+var connected = false
 
-const videoChatContainer = document.getElementById('video-chat-container')
-const localVideoComponent = document.getElementById('local-video')
-const remoteVideoComponent = document.getElementById('remote-video')
-
-var webSocket = createWebSocket()
-
-const mediaConstraints = {
-    audio: true,
-    video: {width: 1280, height: 720},
-    constraints: {
-        facingMode: {
-            exact: 'environment'
-        }
-    },
+function connect() {
+    if (!connected && roomId != null && remoteVideoComponent != null && localStream != null && webSocket == null) {
+        console.log("connecting")
+        connected = true
+        webSocket = createWebSocket()
+    } else {
+        console.log("skipping connect")
+    }
 }
-let localStream
-let remoteStream
-let isRoomCreator
-let rtcPeerConnection
-let rtcDataChannel
-let roomId
+
+function disconnect() {
+    console.log("disconnecting")
+    connected = false
+    if (webSocket != null) {
+        webSocket.close()
+    }
+    webSocket = null
+    roomId = null
+}
+
+export function videoConnect(remoteVideoRef, localVideoStream, room) {
+    console.log("setting remote video ref")
+    remoteVideoComponent = remoteVideoRef
+    localStream = localVideoStream
+    roomId = room
+    connect()
+}
+export function videoDisconnect() {
+    if (localStream != null) {
+        localStream.getTracks().forEach(track => track.stop())
+    }
+    remoteVideoComponent = null
+    localStream = null
+    disconnect()
+}
 
 const iceServers = async () => {
     const response = await fetch('/ice');
     return await response.json();
-}
-
-connectButton.addEventListener('click', () => {
-    joinRoom(roomInput.value)
-})
-
-function joinRoom(room) {
-    if (room === '') {
-        alert('Please type a room ID')
-    } else {
-        roomId = room
-        emit('RoomJoin', {"roomId": roomId})
-        showVideoConference()
-    }
-}
-
-function showVideoConference() {
-    roomSelectionContainer.style = 'display: none'
-    videoChatContainer.style = 'display: block'
-}
-
-async function setLocalStream(mediaConstraints) {
-    let stream
-    try {
-        stream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
-    } catch (error) {
-        console.error('Could not get user media', error)
-    }
-
-    localStream = stream
-    localVideoComponent.srcObject = stream
 }
 
 function addLocalTracks(rtcPeerConnection) {
@@ -121,25 +110,26 @@ function emit(name, data) {
 }
 
 function createWebSocket() {
-    let baseUri = (window.location.protocol == 'https:' && 'wss://' || 'ws://') + window.location.host;
-    let uri = `${baseUri}/ws`
+    let baseUri = (window.location.protocol === 'https:' && 'wss://' || 'ws://') + window.location.host;
+    let uri = `${baseUri}/rtc`
     let socket = new WebSocket(uri);
-    socket.onclose = function (event) {
+    socket.onclose = function () {
+        console.log("websocket closed")
         setTimeout(function () {
-            webSocket = createWebSocket()
+            connect()
         }, 3000);
     };
-    socket.onopen = function (event) {
-        console.log(`websocket open ${event.data}`)
+    socket.onopen = function () {
+        console.log(`websocket open - joining room ${roomId}`)
         socket.send(
             JSON.stringify({
-                "name": "SocketOpen",
-                "data": {"message": "hi"}
+                "name": "RoomJoin",
+                "data": {"roomId": roomId}
             }))
     };
     socket.onmessage = async function (event) {
-        console.log(`handling event: ${event.data}`)
         let msg = JSON.parse(event.data)
+        console.log(`handling event: ${msg.name}`)
         let fn = fnMap[msg.name]
         if (fn !== undefined) {
             await fn(msg.data)
@@ -148,27 +138,24 @@ function createWebSocket() {
     return socket;
 }
 
+
 let fnMap = {
     "SocketOpen": async function (data) {
         console.log(`Socket opened message = ${data.message}`)
     },
-    "RoomCreated": async function (data) {
+    "RoomCreated": async function () {
         console.log('Socket event callback: RoomCreated')
-
-        await setLocalStream(mediaConstraints)
         isRoomCreator = true
     },
-    "RoomJoined": async function (data) {
+    "RoomJoined": async function () {
         console.log('Socket event callback: RoomJoined')
-
-        await setLocalStream(mediaConstraints)
         emit('StartCall', {"roomId": roomId})
     },
-    "FullRoom": async function (data) {
+    "FullRoom": async function () {
         console.log('Socket event callback: FullRoom')
         alert('The room is full, please try another one')
     },
-    "StartCall": async function (data) {
+    "StartCall": async function () {
         console.log('Socket event callback: StartCall')
         if (isRoomCreator) {
             let ice = await iceServers()
@@ -176,7 +163,7 @@ let fnMap = {
             rtcDataChannel = rtcPeerConnection.createDataChannel("chat", {
                 ordered: true
             })
-            addLocalTracks(rtcPeerConnection)
+            await addLocalTracks(rtcPeerConnection)
             rtcPeerConnection.ontrack = setRemoteStream
             rtcPeerConnection.onicecandidate = sendIceCandidate
             await createOffer(rtcPeerConnection)
@@ -190,7 +177,7 @@ let fnMap = {
             rtcDataChannel = rtcPeerConnection.createDataChannel("chat", {
                 ordered: true
             })
-            addLocalTracks(rtcPeerConnection)
+            await addLocalTracks(rtcPeerConnection)
             rtcPeerConnection.ontrack = setRemoteStream
             rtcPeerConnection.onicecandidate = sendIceCandidate
             let description = new RTCSessionDescription({
@@ -215,7 +202,9 @@ let fnMap = {
             sdpMLineIndex: data.label,
             candidate: data.candidate,
         })
-        await rtcPeerConnection.addIceCandidate(candidate)
+        if (rtcPeerConnection != null) {
+            await rtcPeerConnection.addIceCandidate(candidate)
+        }
     }
 };
 

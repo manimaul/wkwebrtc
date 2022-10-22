@@ -33,7 +33,7 @@ class User(
     }
 
     fun room() : Room? {
-        return rooms[roomId]
+        return roomId?.let { rooms[it] }
     }
 }
 
@@ -88,7 +88,7 @@ fun Application.configureSockets() {
     }
 
     routing {
-        webSocket("/ws") {
+        webSocket("/rtc") {
             val user = User(outgoing = outgoing)
             logger.info("ws connected")
             user.send(SocketOpen("hi"))

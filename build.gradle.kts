@@ -25,7 +25,14 @@ repositories {
 tasks {
     "run"(JavaExec::class) {
         environment("WWW", File(project.rootDir, "www/build").absolutePath)
+        environment("TURN_KEY", "fake_dev_key")
+        dependsOn("www")
     }
+}
+
+task<Exec>("wwwDev") {
+    workingDir("www")
+    commandLine("npm", "start")
 }
 
 task<Exec>("www") {

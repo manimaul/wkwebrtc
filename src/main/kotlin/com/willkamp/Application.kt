@@ -26,6 +26,7 @@ fun Application.configureRouting() {
         }
         static {
             file("/", index)
+            file("/room/*", index)
         }
         static("/") {
             files(www)
